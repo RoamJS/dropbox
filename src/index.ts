@@ -69,7 +69,7 @@ export default runExtension({
                       redirect_uri: "https://roamjs.com/oauth?auth=true",
                       dev: undefined,
                     },
-                  }).then((r) => r.data),
+                  }),
               }),
           },
         },
@@ -184,8 +184,7 @@ export default runExtension({
                   authorization: `Bearer ${access_token}`,
                 })
                   .then((r) => {
-                    const contentType =
-                      mimeLookup(r.name) || "text/plain";
+                    const contentType = mimeLookup(r.name) || "text/plain";
                     return apiPost<{ links: { url: string }[] }>({
                       path: "sharing/list_shared_links",
                       domain: "https://api.dropboxapi.com/2",
