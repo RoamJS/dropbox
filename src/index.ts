@@ -1,7 +1,7 @@
 import runExtension from "roamjs-components/util/runExtension";
 import getOauth from "roamjs-components/util/getOauth";
 import getDropUidOffset from "roamjs-components/dom/getDropUidOffset";
-import DropboxLogo from "./Dropbox.svg";
+import DropboxLogo from "./components/DropboxLogo";
 import differenceInSeconds from "date-fns/differenceInSeconds";
 import createBlock from "roamjs-components/writes/createBlock";
 import updateBlock from "roamjs-components/writes/updateBlock";
@@ -38,7 +38,7 @@ function httpHeaderSafeJson(args: Record<string, unknown>) {
 }
 
 export default runExtension({
-  run: (args) => {
+  run: async (args) => {
     args.extensionAPI.settings.panel.create({
       tabTitle: "Dropbox",
       settings: [
@@ -147,10 +147,11 @@ export default runExtension({
       getLoadingUid,
       e,
     }: {
-      files: FileList;
+      files: FileList | null;
       getLoadingUid: () => Promise<string>;
       e: Event;
     }) => {
+      if (!files) return;
       const fileToUpload = files[0];
       if (fileToUpload) {
         getLoadingUid().then((uid) => {
@@ -219,7 +220,10 @@ export default runExtension({
                           : contentType.includes("video/")
                           ? `{{video: ${dbxUrl}}}`
                           : contentType.includes("image/")
-                          ? `![](${dbxUrl})`
+                          ? `![](${dbxUrl.replace(
+                              "www.dropbox.com",
+                              "dl.dropboxusercontent.com"
+                            )})`
                           : `[${fileToUpload.name}](${dbxUrl})`
                         : `Unknown Content type for file ${fileToUpload.name}`,
                     });
@@ -242,12 +246,14 @@ export default runExtension({
     createHTMLObserver({
       tag: "DIV",
       className: "dnd-drop-area",
-      callback: (d: HTMLDivElement) => {
+      callback: (d) => {
         d.addEventListener("drop", (e) => {
           uploadToDropbox({
-            files: e.dataTransfer.files,
+            files: e.dataTransfer?.files || null,
             getLoadingUid: () => {
-              const { parentUid, offset } = getDropUidOffset(d);
+              const { parentUid, offset } = getDropUidOffset(
+                d as HTMLDivElement
+              );
               return createBlock({
                 parentUid,
                 order: offset,
@@ -260,20 +266,20 @@ export default runExtension({
       },
     });
 
-    const textareaRef: { current: HTMLTextAreaElement } = {
+    const textareaRef: { current: HTMLTextAreaElement | null } = {
       current: null,
     };
 
     createHTMLObserver({
       tag: "TEXTAREA",
       className: "rm-block-input",
-      callback: (t: HTMLTextAreaElement) => {
-        textareaRef.current = t;
+      callback: (t) => {
+        textareaRef.current = t as HTMLTextAreaElement;
         t.addEventListener("paste", (e) => {
           uploadToDropbox({
-            files: e.clipboardData.files,
+            files: e.clipboardData?.files || null,
             getLoadingUid: () => {
-              const { blockUid } = getUids(t);
+              const { blockUid } = getUids(t as HTMLTextAreaElement);
               return updateBlock({
                 text: "Loading...",
                 uid: blockUid,
@@ -285,7 +291,7 @@ export default runExtension({
       },
     });
 
-    const clickListener = (e: MouseEvent) => {
+    const clickListener = (e: Event) => {
       const target = e.target as HTMLInputElement;
       if (
         target.tagName === "INPUT" &&
@@ -311,10 +317,12 @@ export default runExtension({
         );
       }
     };
-    document.addEventListener("click", clickListener);
+    document.body.addEventListener("click", clickListener);
 
     return {
-      domListeners: [{ listener: clickListener, el: document, type: "click" }],
+      domListeners: [
+        { listener: clickListener, el: document.body, type: "click" },
+      ],
     };
   },
 });

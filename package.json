@@ -1,7 +1,7 @@
 {
   "name": "dropbox",
   "version": "1.0.0",
-"description": "Send file uploads in Roam directly to your Dropbox!",
+  "description": "Send file uploads in Roam directly to your Dropbox!",
   "main": "./build/main.js",
   "scripts": {
     "prebuild:roam": "npm install",
@@ -9,11 +9,8 @@
     "start": "roamjs-scripts dev --depot"
   },
   "license": "MIT",
-  "devDependencies": {
-    "roamjs-scripts": "^0.24.0"
-  },
   "dependencies": {
     "dropbox": "^10.32.0",
-    "roamjs-components": "^0.74.11"
+    "roamjs-components": "^0.78.4"
   }
 }
