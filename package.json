@@ -4,13 +4,18 @@
   "description": "Send file uploads in Roam directly to your Dropbox!",
   "main": "./build/main.js",
   "scripts": {
+    "postinstall": "patch-package",
+    "start": "samepage dev",
     "prebuild:roam": "npm install",
-    "build:roam": "roamjs-scripts build --depot",
-    "start": "roamjs-scripts dev --depot"
+    "build:roam": "samepage build --dry",
+    "test": "samepage test"
   },
   "license": "MIT",
   "dependencies": {
     "dropbox": "^10.32.0",
-    "roamjs-components": "^0.78.4"
+    "roamjs-components": "^0.80.3"
+  },
+  "samepage": {
+    "extends": "node_modules/roamjs-components/package.json"
   }
 }
