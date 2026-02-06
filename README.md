@@ -1,6 +1,12 @@
+<a href="https://roamjs.com/">
+    <img src="https://avatars.githubusercontent.com/u/138642184" alt="RoamJS Logo" title="RoamJS" align="right" height="60" />
+</a>
+
 # Dropbox
 
-Send file uploads in Roam directly to your Dropbox!
+**Automatically send Roam file uploads to Dropbox. Intercepts attachments, uploads them to your Dropbox, and replaces the upload with a shareable link (audio/pdf/video supported). Keep your graph light while storing files in the cloud.**
+
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/RoamJS/dropbox)
 
 ## Usage
 
