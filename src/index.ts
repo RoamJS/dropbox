@@ -14,6 +14,10 @@ import React from "react";
 import apiPost from "roamjs-components/util/apiPost";
 import mimeTypes from "./mimeTypes";
 
+const DROPBOX_CLIENT_ID = "ghagecp4sgm6v99";
+const DROPBOX_AUTH_DOMAIN = "https://roamjs.com";
+const DROPBOX_REDIRECT_URI = "https://roamjs.com/oauth?auth=true";
+
 const mimeLookup = (path: string) => {
   if (!path || typeof path !== "string") {
     return false;
@@ -53,19 +57,19 @@ export default runExtension(async (args) => {
               ServiceIcon: DropboxLogo,
               getPopoutUrl: () =>
                 Promise.resolve(
-                  `https://www.dropbox.com/oauth2/authorize?client_id=ghagecp4sgm6v99&redirect_uri=${encodeURIComponent(
-                    "https://roamjs.com/oauth?auth=true"
+                  `https://www.dropbox.com/oauth2/authorize?client_id=${DROPBOX_CLIENT_ID}&redirect_uri=${encodeURIComponent(
+                    DROPBOX_REDIRECT_URI
                   )}&response_type=code&token_access_type=offline`
                 ),
               getAuthData: (data) =>
                 apiPost({
-                  domain: `https://lambda.roamjs.com`,
+                  domain: DROPBOX_AUTH_DOMAIN,
                   path: `dropbox-auth`,
                   anonymous: true,
                   data: {
                     ...JSON.parse(data),
                     grant_type: "authorization_code",
-                    redirect_uri: "https://roamjs.com/oauth?auth=true",
+                    redirect_uri: DROPBOX_REDIRECT_URI,
                     dev: undefined,
                   },
                 }),
@@ -87,7 +91,7 @@ export default runExtension(async (args) => {
       );
       return tokenAge > expires_in
         ? apiPost<{ access_token: string }>({
-            domain: `https://lambda.roamjs.com`,
+            domain: DROPBOX_AUTH_DOMAIN,
             path: `dropbox-auth`,
             data: {
               refresh_token,
