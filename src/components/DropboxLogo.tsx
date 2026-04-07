@@ -8,9 +8,10 @@ const DropboxLogo = () => (
     xmlnsXlink="http://www.w3.org/1999/xlink"
     x="0px"
     y="0px"
-    width="84px"
-    height="63.8px"
+    width="16"
+    height="16"
     viewBox="0 0 84 63.8"
+    preserveAspectRatio="xMidYMid meet"
     xmlSpace="preserve"
   >
     <style

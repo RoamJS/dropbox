@@ -1,7 +1,6 @@
 import runExtension from "roamjs-components/util/runExtension";
 import getOauth from "roamjs-components/util/getOauth";
 import getDropUidOffset from "roamjs-components/dom/getDropUidOffset";
-import DropboxLogo from "./components/DropboxLogo";
 import differenceInSeconds from "date-fns/differenceInSeconds";
 import createBlock from "roamjs-components/writes/createBlock";
 import updateBlock from "roamjs-components/writes/updateBlock";
@@ -9,14 +8,12 @@ import getUids from "roamjs-components/dom/getUids";
 import createHTMLObserver from "roamjs-components/dom/createHTMLObserver";
 import localStorageGet from "roamjs-components/util/localStorageGet";
 import localStorageSet from "roamjs-components/util/localStorageSet";
-import OauthPanel from "roamjs-components/components/OauthPanel";
 import React from "react";
 import apiPost from "roamjs-components/util/apiPost";
 import mimeTypes from "./mimeTypes";
+import DropboxOauthPanel from "./components/DropboxOauthPanel";
 
-const DROPBOX_CLIENT_ID = "ghagecp4sgm6v99";
 const DROPBOX_AUTH_DOMAIN = "https://roamjs.com";
-const DROPBOX_REDIRECT_URI = "https://roamjs.com/oauth?auth=true";
 
 const mimeLookup = (path: string) => {
   if (!path || typeof path !== "string") {
@@ -51,29 +48,7 @@ export default runExtension(async (args) => {
         description: "Log into Dropbox to connect your account to Roam!",
         action: {
           type: "reactComponent",
-          component: () =>
-            React.createElement(OauthPanel, {
-              service: "dropbox",
-              ServiceIcon: DropboxLogo,
-              getPopoutUrl: () =>
-                Promise.resolve(
-                  `https://www.dropbox.com/oauth2/authorize?client_id=${DROPBOX_CLIENT_ID}&redirect_uri=${encodeURIComponent(
-                    DROPBOX_REDIRECT_URI
-                  )}&response_type=code&token_access_type=offline`
-                ),
-              getAuthData: (data) =>
-                apiPost({
-                  domain: DROPBOX_AUTH_DOMAIN,
-                  path: `dropbox-auth`,
-                  anonymous: true,
-                  data: {
-                    ...JSON.parse(data),
-                    grant_type: "authorization_code",
-                    redirect_uri: DROPBOX_REDIRECT_URI,
-                    dev: undefined,
-                  },
-                }),
-            }),
+          component: () => React.createElement(DropboxOauthPanel),
         },
       },
     ],
