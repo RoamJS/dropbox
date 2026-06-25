@@ -267,38 +267,61 @@ const DropboxOauthPanel = () => {
 
   return (
     <div className="flex flex-col gap-2" style={{ minWidth: 300 }}>
-      <button
-        className="bp3-button bp3-minimal"
-        onClick={login}
-        disabled={loading}
-      >
-        <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-          <span style={{ width: 15, height: 15, display: "inline-flex" }}>
-            <DropboxLogo />
+      {!account ? (
+        <button
+          className="bp3-button bp3-minimal"
+          onClick={login}
+          disabled={loading}
+        >
+          <span
+            style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
+          >
+            <span style={{ width: 15, height: 15, display: "inline-flex" }}>
+              <DropboxLogo />
+            </span>
+            {loading ? "Connecting..." : "Login With Dropbox"}
           </span>
-          {loading
-            ? "Connecting..."
-            : account
-              ? "Reconnect Dropbox"
-              : "Login With Dropbox"}
-        </span>
-      </button>
-      {!!account && (
-        <>
+        </button>
+      ) : (
+        <div className="flex flex-col gap-2">
           <div
             style={{
               display: "flex",
-              justifyContent: "space-between",
               alignItems: "center",
-              marginTop: 8,
+              gap: 8,
+              minHeight: 30,
             }}
           >
-            <span style={{ minWidth: 192 }}>{account.text}</span>
-            <button className="bp3-button bp3-small" onClick={removeAccount}>
-              Log Out
-            </button>
+            <span style={{ width: 15, height: 15, display: "inline-flex" }}>
+              <DropboxLogo />
+            </span>
+            <span style={{ fontWeight: 600 }}>Connected</span>
+            <span className="bp3-text-muted" style={{ marginLeft: 4 }}>
+              {account.text}
+            </span>
           </div>
-        </>
+          <details>
+            <summary className="bp3-text-muted" style={{ cursor: "pointer" }}>
+              Connection options
+            </summary>
+            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+              <button
+                className="bp3-button bp3-small bp3-minimal"
+                onClick={login}
+                disabled={loading}
+              >
+                {loading ? "Connecting..." : "Reconnect"}
+              </button>
+              <button
+                className="bp3-button bp3-small bp3-minimal"
+                onClick={removeAccount}
+                disabled={loading}
+              >
+                Log Out
+              </button>
+            </div>
+          </details>
+        </div>
       )}
       {!!error && (
         <div style={{ color: "red", whiteSpace: "pre-line" }}>{error}</div>
