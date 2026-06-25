@@ -315,6 +315,7 @@ const DropboxOauthPanel = () => {
               <button
                 className="bp3-button bp3-small bp3-minimal"
                 onClick={removeAccount}
+                disabled={loading}
               >
                 Log Out
               </button>
