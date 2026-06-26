@@ -19,6 +19,8 @@ import DropboxOauthPanel from "./components/DropboxOauthPanel";
 const DROPBOX_AUTH_DOMAIN = "https://roamjs.com";
 const DROPBOX_UPLOAD_URL = "https://content.dropboxapi.com/2/files/upload";
 const DROPBOX_LOADING_TEXT = "";
+const DROPBOX_UPLOAD_LIMIT_MB = 150;
+const DROPBOX_UPLOAD_LIMIT_BYTES = DROPBOX_UPLOAD_LIMIT_MB * 1024 * 1024;
 
 const mimeLookup = (path: string) => {
   if (!path || typeof path !== "string") {
@@ -267,6 +269,20 @@ export default runExtension(async (args) => {
       e.stopPropagation();
       e.stopImmediatePropagation();
       e.preventDefault();
+
+      if (fileToUpload.size > DROPBOX_UPLOAD_LIMIT_BYTES) {
+        const fileName = fileToUpload.name || "This file";
+        renderToast({
+          id: "dropbox-upload-too-large",
+          intent: Intent.DANGER,
+          timeout: 8000,
+          content:
+            `${fileName} is too large to upload to Dropbox. ` +
+            `This uploader currently supports files up to ${DROPBOX_UPLOAD_LIMIT_MB} MB.`,
+        });
+        hideDropBars();
+        return;
+      }
 
       getLoadingUid().then((uid) => {
         const removeLoading = renderUploadLoading(uid);
