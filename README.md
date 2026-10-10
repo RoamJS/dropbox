@@ -6,7 +6,7 @@
 
 **Automatically send Roam file uploads to Dropbox. Intercepts attachments, uploads them to your Dropbox, and replaces the upload with a shareable link (audio/pdf/video supported). Keep your graph light while storing files in the cloud.**
 
-[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/RoamJS/dropbox)
+[![RoamJS](https://roamjs.com/badges/website.svg)](https://roamjs.com/) [![DeepWiki](https://roamjs.com/badges/deepwiki.svg)](https://deepwiki.com/RoamJS/dropbox) [![Slack](https://roamjs.com/badges/slack.svg)](https://roamresearch.slack.com/archives/C016N2B66JU)
 
 ## Usage
 
