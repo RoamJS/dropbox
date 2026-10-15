@@ -19,7 +19,6 @@ import {
   ensureDropboxFolder,
   getDropboxUploadPath,
   getPageFolder,
-  UploadPage,
 } from "./uploadPaths";
 
 const DROPBOX_AUTH_DOMAIN = "https://roamjs.com";
@@ -226,14 +225,20 @@ export default runExtension(async (args) => {
     const block = window.roamAlphaAPI.pull(
       "[:block/uid :node/title {:block/page [:block/uid :node/title]}]",
       [":block/uid", uid]
-    ) as { uid?: string; title?: string; page?: UploadPage } | null;
-    const page = block?.title ? (block as UploadPage) : block?.page;
-    if (!page?.uid || !page.title) {
+    ) as {
+      ":block/uid"?: string;
+      ":node/title"?: string;
+      ":block/page"?: { ":block/uid"?: string; ":node/title"?: string };
+    } | null;
+    const page = block?.[":node/title"] ? block : block?.[":block/page"];
+    const pageUid = page?.[":block/uid"];
+    const pageTitle = page?.[":node/title"];
+    if (!pageUid || !pageTitle) {
       throw new Error(
         "Could not identify the upload's Roam page. Please try again."
       );
     }
-    const path = getPageFolder(page);
+    const path = getPageFolder({ uid: pageUid, title: pageTitle });
     await ensureDropboxFolder({
       path,
       createFolder: (path) =>

@@ -47,8 +47,8 @@ const setup = async ({
   const updated: { uid: string; text: string }[] = [];
   const observers: Record<string, (element: HTMLElement) => void> = {};
   const pages = {
-    source001: { uid: "page00001", title: "Source / page" },
-    sidebar01: { uid: "page00002", title: "Sidebar" },
+    source001: { ":block/uid": "page00001", ":node/title": "Source / page" },
+    sidebar01: { ":block/uid": "page00002", ":node/title": "Sidebar" },
   };
   const settings = { get: () => enabled, panel: { create: () => undefined } };
   const mocks = {
@@ -97,7 +97,7 @@ const setup = async ({
     },
   };
   window.roamAlphaAPI = {
-    pull: (_, [, uid]) => (missingPage ? null : { page: pages[uid] }),
+    pull: (_, [, uid]) => (missingPage ? null : { ":block/page": pages[uid] }),
   };
   const context = vm.createContext({
     window,
