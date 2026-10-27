@@ -15,6 +15,11 @@ import { renderLoading } from "roamjs-components/components/Loading";
 import { Intent } from "@blueprintjs/core";
 import mimeTypes from "./mimeTypes";
 import DropboxOauthPanel from "./components/DropboxOauthPanel";
+import {
+  ensureDropboxFolder,
+  getDropboxUploadPath,
+  getPageFolder,
+} from "./uploadPaths";
 
 const DROPBOX_AUTH_DOMAIN = "https://roamjs.com";
 const DROPBOX_UPLOAD_URL = "https://content.dropboxapi.com/2/files/upload";
@@ -125,6 +130,13 @@ export default runExtension(async (args) => {
     tabTitle: "Dropbox",
     settings: [
       {
+        id: "organize-by-page",
+        name: "Organize uploads by page",
+        description:
+          "Save new uploads in a folder named after their Roam page, with a page ID to prevent collisions. Renaming a page uses a new folder for future uploads; existing files stay in place.",
+        action: { type: "switch" },
+      },
+      {
         id: "oauth",
         name: "Log In",
         description: "Log into Dropbox to connect your account to Roam!",
@@ -144,7 +156,7 @@ export default runExtension(async (args) => {
       const { time, uid: oauthUid } = node || {};
       const tokenAge = differenceInSeconds(
         new Date(),
-        time ? new Date(time) : new Date(0),
+        time ? new Date(time) : new Date(0)
       );
       return tokenAge > expires_in
         ? apiPost<{ access_token: string }>({
@@ -160,7 +172,7 @@ export default runExtension(async (args) => {
             .then((r) => {
               if (!r.access_token) {
                 return Promise.reject(
-                  `Did not find an access token. Found: ${JSON.stringify(r)}`,
+                  `Did not find an access token. Found: ${JSON.stringify(r)}`
                 );
               }
               const storageData = localStorageGet("oauth-dropbox");
@@ -181,9 +193,9 @@ export default runExtension(async (args) => {
                             time: new Date().valueOf(),
                             text: at.text,
                           }
-                        : at,
-                  ),
-                ),
+                        : at
+                  )
+                )
               );
               return r.access_token;
             })
@@ -191,26 +203,60 @@ export default runExtension(async (args) => {
               Promise.reject(
                 `Failed to refresh your access token: ${
                   e.response.data || e.message
-                }`,
-              ),
+                }`
+              )
             )
         : Promise.resolve(access_token);
     } else {
       return Promise.reject(
-        "Could not find your login info. Try first logging in through the [[roam/js/dropbox]] page",
+        "Could not find your login info. Try first logging in through the [[roam/js/dropbox]] page"
       );
     }
   };
 
-  const getDropboxUploadPath = (fileName: string) => {
-    const safeName = fileName.replace(/[\\/]/g, "-") || "upload";
-    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-    const extensionIndex = safeName.lastIndexOf(".");
-    return extensionIndex > 0
-      ? `/${safeName.slice(0, extensionIndex)}-${id}${safeName.slice(
-          extensionIndex,
-        )}`
-      : `/${safeName}-${id}`;
+  const getUploadFolder = async ({
+    uid,
+    access_token,
+  }: {
+    uid: string;
+    access_token: string;
+  }): Promise<string> => {
+    if (!args.extensionAPI.settings.get("organize-by-page")) return "";
+    const block = window.roamAlphaAPI.pull(
+      "[:block/uid :node/title {:block/page [:block/uid :node/title]}]",
+      [":block/uid", uid]
+    ) as {
+      ":block/uid"?: string;
+      ":node/title"?: string;
+      ":block/page"?: { ":block/uid"?: string; ":node/title"?: string };
+    } | null;
+    const page = block?.[":node/title"] ? block : block?.[":block/page"];
+    const pageUid = page?.[":block/uid"];
+    const pageTitle = page?.[":node/title"];
+    if (!pageUid || !pageTitle) {
+      throw new Error(
+        "Could not identify the upload's Roam page. Please try again."
+      );
+    }
+    const path = getPageFolder({ uid: pageUid, title: pageTitle });
+    await ensureDropboxFolder({
+      path,
+      createFolder: (path) =>
+        apiPost({
+          path: "files/create_folder_v2",
+          domain: "https://api.dropboxapi.com/2",
+          data: { path, autorename: false, dev: undefined },
+          authorization: `Bearer ${access_token}`,
+        }),
+      getMetadata: (path) =>
+        apiPost<{ ".tag"?: string }>({
+          path: "files/get_metadata",
+          domain: "https://api.dropboxapi.com/2",
+          data: { path, dev: undefined },
+          authorization: `Bearer ${access_token}`,
+        }),
+    });
+    return path;
   };
 
   const getDropboxMetadata = ({
@@ -246,9 +292,9 @@ export default runExtension(async (args) => {
               path,
               uploadError,
               retries: retries - 1,
-            }),
+            })
           )
-        : Promise.reject(uploadError || metadataError),
+        : Promise.reject(uploadError || metadataError)
     );
 
   const uploadToDropbox = ({
@@ -303,7 +349,11 @@ export default runExtension(async (args) => {
         };
         return getAccessToken()
           .then(async (access_token) => {
-            const uploadPath = getDropboxUploadPath(fileToUpload.name);
+            const folder = await getUploadFolder({ uid, access_token });
+            const uploadPath = getDropboxUploadPath({
+              fileName: fileToUpload.name,
+              folder,
+            });
 
             return apiPost<DropboxFileMetadata>({
               href: getProxiedUrl(DROPBOX_UPLOAD_URL),
@@ -322,14 +372,14 @@ export default runExtension(async (args) => {
                   access_token,
                   path: uploadPath,
                   uploadError,
-                }),
+                })
               )
               .then((r) => {
                 const contentType = mimeLookup(r.name) || "text/plain";
                 return apiPost<{ links: { url: string }[] }>({
                   path: "sharing/list_shared_links",
                   domain: "https://api.dropboxapi.com/2",
-                  data: { path: r.path_display, dev: undefined },
+                  data: { path: r.path_display, direct_only: true, dev: undefined },
                   authorization: `Bearer ${access_token}`,
                 }).then((l) =>
                   l.links.length
@@ -345,7 +395,7 @@ export default runExtension(async (args) => {
                           dev: undefined,
                         },
                         authorization: `Bearer ${access_token}`,
-                      }).then((c) => ({ url: c.url, contentType })),
+                      }).then((c) => ({ url: c.url, contentType }))
                 );
               })
               .then(({ url, contentType }) => {
@@ -356,15 +406,15 @@ export default runExtension(async (args) => {
                     ? contentType.includes("audio/")
                       ? `{{audio: ${dbxUrl}}}`
                       : contentType.includes("pdf")
-                        ? `{{pdf: ${dbxUrl}}}`
-                        : contentType.includes("video/")
-                          ? `{{video: ${dbxUrl}}}`
-                          : contentType.includes("image/")
-                            ? `![](${dbxUrl.replace(
-                                "www.dropbox.com",
-                                "dl.dropboxusercontent.com",
-                              )})`
-                            : `[${fileToUpload.name}](${dbxUrl})`
+                      ? `{{pdf: ${dbxUrl}}}`
+                      : contentType.includes("video/")
+                      ? `{{video: ${dbxUrl}}}`
+                      : contentType.includes("image/")
+                      ? `![](${dbxUrl.replace(
+                          "www.dropbox.com",
+                          "dl.dropboxusercontent.com"
+                        )})`
+                      : `[${fileToUpload.name}](${dbxUrl})`
                     : `Unknown Content type for file ${fileToUpload.name}`,
                 });
               })
@@ -381,7 +431,7 @@ export default runExtension(async (args) => {
 
   const dropAreas = new WeakSet<HTMLDivElement>();
   const textareas = new WeakSet<HTMLTextAreaElement>();
-  const fileInputs = new WeakSet<HTMLInputElement>();
+  const fileInputs = new WeakMap<HTMLInputElement, string>();
 
   createHTMLObserver({
     tag: "DIV",
@@ -419,6 +469,9 @@ export default runExtension(async (args) => {
       textareaRef.current = textarea;
       if (textareas.has(textarea)) return;
       textareas.add(textarea);
+      textarea.addEventListener("focus", () => {
+        textareaRef.current = textarea;
+      });
       textarea.addEventListener("paste", (e) => {
         uploadToDropbox({
           files: e.clipboardData?.files || null,
@@ -442,24 +495,25 @@ export default runExtension(async (args) => {
       target.parentElement === document.body &&
       target.type === "file"
     ) {
-      if (fileInputs.has(target)) return;
-      fileInputs.add(target);
+      const { blockUid } = getUids(textareaRef.current);
+      const alreadyObserved = fileInputs.has(target);
+      fileInputs.set(target, blockUid);
+      if (alreadyObserved) return;
       target.addEventListener(
         "change",
         (e) => {
           uploadToDropbox({
             files: (e.target as HTMLInputElement).files,
             getLoadingUid: () => {
-              const { blockUid } = getUids(textareaRef.current);
               return updateBlock({
                 text: DROPBOX_LOADING_TEXT,
-                uid: blockUid,
+                uid: fileInputs.get(target) || "",
               });
             },
             e,
           });
         },
-        true,
+        true
       );
     }
   };
