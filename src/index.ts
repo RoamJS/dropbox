@@ -379,7 +379,7 @@ export default runExtension(async (args) => {
                 return apiPost<{ links: { url: string }[] }>({
                   path: "sharing/list_shared_links",
                   domain: "https://api.dropboxapi.com/2",
-                  data: { path: r.path_display, dev: undefined },
+                  data: { path: r.path_display, direct_only: true, dev: undefined },
                   authorization: `Bearer ${access_token}`,
                 }).then((l) =>
                   l.links.length

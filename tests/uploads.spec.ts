@@ -20,15 +20,15 @@ test.beforeAll(async () => {
               filter:
                 /^(roamjs-components\/|react$|@blueprintjs\/core$)|DropboxOauthPanel$/,
             },
-            ({ path }) => ({ path, namespace: "fixture" })
+            ({ path }) => ({ path, namespace: "fixture" }),
           );
           builder.onLoad(
             { filter: /.*/, namespace: "fixture" },
             ({ path }) => ({
               contents: `module.exports = mocks[${JSON.stringify(
-                path
+                path,
               )}] || {};`,
-            })
+            }),
           );
         },
       },
@@ -41,6 +41,7 @@ const setup = async ({
   enabled = true,
   missingPage = false,
   folderError = false,
+  sharedParent = false,
 } = {}) => {
   const { window } = new JSDOM("<body></body>");
   const calls: { path: string; data?: any; headers?: any }[] = [];
@@ -90,7 +91,13 @@ const setup = async ({
         const path = JSON.parse(args.headers["Dropbox-API-Arg"]).path;
         return { name: path.split("/").pop(), path_display: path };
       }
-      if (path === "sharing/list_shared_links") return { links: [] };
+      if (path === "sharing/list_shared_links")
+        return {
+          links:
+            sharedParent && !args.data.direct_only
+              ? [{ url: "https://www.dropbox.com/shared-parent?dl=0" }]
+              : [],
+        };
       if (path === "sharing/create_shared_link_with_settings")
         return { url: "https://www.dropbox.com/fixture?dl=0" };
       throw new Error(`Unexpected route ${path}`);
@@ -161,14 +168,14 @@ for (const entry of ["paste", "drop", "picker"]) {
       textarea("sidebar01");
       Object.defineProperty(input, "files", { value: [file("same.pdf")] });
       input.dispatchEvent(
-        new window.Event("change", { bubbles: true, cancelable: true })
+        new window.Event("change", { bubbles: true, cancelable: true }),
       );
     }
     await expect
       .poll(() => updated.at(-1)?.text)
       .toBe("{{pdf: https://www.dropbox.com/fixture?raw=1}}");
     const uploadedPath = JSON.parse(
-      calls.find((c) => c.path === "upload")!.headers["Dropbox-API-Arg"]
+      calls.find((c) => c.path === "upload")!.headers["Dropbox-API-Arg"],
     ).path;
     expect(uploadedPath).toMatch(/^\/Source - page--[^/]+\/same-/);
     expect(updated.at(-1)?.uid).toBe("source001");
@@ -194,14 +201,14 @@ test("refocusing an existing sidebar textarea and reusing an input updates the d
   side.focus();
   input.dispatchEvent(new window.Event("click", { bubbles: true }));
   input.dispatchEvent(
-    new window.Event("change", { bubbles: true, cancelable: true })
+    new window.Event("change", { bubbles: true, cancelable: true }),
   );
   await expect.poll(() => updated.at(-1)?.text.startsWith("![](")).toBe(true);
   expect(updated.at(-1)?.uid).toBe("sidebar01");
   expect(
     JSON.parse(
-      calls.find((c) => c.path === "upload")!.headers["Dropbox-API-Arg"]
-    ).path
+      calls.find((c) => c.path === "upload")!.headers["Dropbox-API-Arg"],
+    ).path,
   ).toMatch(/^\/Sidebar--/);
   window.close();
 });
@@ -218,8 +225,8 @@ test("disabled setting keeps root uploads and does not require page metadata", a
   expect(calls.some((c) => c.path === "files/create_folder_v2")).toBe(false);
   expect(
     JSON.parse(
-      calls.find((c) => c.path === "upload")!.headers["Dropbox-API-Arg"]
-    ).path.split("/")
+      calls.find((c) => c.path === "upload")!.headers["Dropbox-API-Arg"],
+    ).path.split("/"),
   ).toHaveLength(2);
   window.close();
 });
@@ -237,3 +244,20 @@ for (const scenario of ["missingPage", "folderError"]) {
     window.close();
   });
 }
+
+test("uploads inside a shared page folder create a direct file link", async () => {
+  const { window, textarea, paste, calls, updated } = await setup({
+    sharedParent: true,
+  });
+  paste(textarea("source001"));
+  await expect
+    .poll(() => updated.at(-1)?.text)
+    .toBe("{{pdf: https://www.dropbox.com/fixture?raw=1}}");
+  expect(
+    calls.find((c) => c.path === "sharing/list_shared_links")!.data.direct_only,
+  ).toBe(true);
+  expect(
+    calls.some((c) => c.path === "sharing/create_shared_link_with_settings"),
+  ).toBe(true);
+  window.close();
+});
